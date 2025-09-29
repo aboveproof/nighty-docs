@@ -1,14 +1,23 @@
-# NightyScript Documentation v4.3 (Public)
+# NightyScript Documentation v4.6 (Public)
 
-**Created by:** rico
+**Created by:** thedorekaczynski
 
 **Made with:** [manus.im](https://manus.im) and [claude.ai](https://claude.ai)
 
 ---
 
+## Table of Contents
+
+- [1. Overview](#1-overview)
+- [2. Script Structure](#2-script-structure)
+- [3. Command Prefix](#3-command-prefix)
+- [4. Core Functions](#4-core-functions)
+- [5. Asynchronous Operations](#5-asynchronous-operations)
+- [6. Common Script Patterns](#6-common-script-patterns)
+
 ## 1. Overview
 
-NightyScript extends Nighty (a Discord selfbot) with custom Python scripts. Scripts define commands and event handlers. Nighty manages the Discord connection; scripts focus purely on functionality.
+NightyScript extends Nighty (a Discord selfbot) with custom Python scripts. Scripts define commands and event handlers. Nighty manages the Discord connection; scripts focus purely on functionality. It is built on a modified version of the discord.py-self library.
 
 **Do not** use standard `discord.py` libraries directly, except as documented.
 
@@ -29,11 +38,23 @@ import matplotlib  # or any matplotlib-related imports
 
 You may use objects like `discord.File` without importing them — NightyScript makes them available via its built-in API.
 
-### 1.2 Guidelines 
+### 1.2 Guidelines
 
 * Only use standard Python imports and NightyScript-provided functions.
 * External Python packages (e.g. `pydub`, `numpy`, `matplotlib`) are not allowed, unless they are non-Python tools like Docker.
 * All dependencies must be documented inside the script's docstring.
+
+#### 1.2.1 External Dependencies for Custom Scripts
+
+Custom scripts in this repository may use external dependencies including:
+- Python packages: `selenium`, `beautifulsoup4`, `requests`, `pandas`, etc.
+- Node.js tools: `puppeteer`, `playwright`, etc.
+- System tools: Docker, browser drivers, etc.
+
+Requirements:
+- All dependencies must be documented in the script's docstring
+- Include installation instructions (e.g., `pip install package-name`)
+- For Node.js dependencies, include npm/yarn install commands
 
 ### 1.3 Embed Limitation
 
@@ -75,7 +96,7 @@ script_function()  # IMPORTANT: Call to initialize
 
 **description**: Brief explanation (string).
 
-**usage**: Command syntax. `<p>` is the user's configured prefix. `[]` denotes optional arguments, `--` indicates flags (string).
+**usage**: Command syntax. `<p>` is the user's configured prefix. `[]` denotes optional arguments, `-` indicates flags (string).
 
 The decorated function (`script_function`) is the script's entry point. It's called on script load.
 
@@ -102,7 +123,7 @@ def script_function():
 
     EXAMPLES:
     <p>command1 arg1 arg2 - Example usage of command1
-    <p>command2 --flag     - Example usage of command2 with flags
+    <p>command2 -flag     - Example usage of command2 with flags
 
     NOTES:
     - Important note about functionality
@@ -224,7 +245,7 @@ Define commands using the `@bot.command` decorator:
 @bot.command(
     name="command",
     aliases=["c", "cmd"], # Optional list of aliases
-    usage="<arg1> [--flag]",
+    usage="<arg1> [-flag]",
     description="Desc"
 )
 async def command_handler(ctx, *, args: str):
@@ -233,7 +254,7 @@ async def command_handler(ctx, *, args: str):
     # Argument parsing example:
     parts = args.split()
     arg1 = parts[0] if parts else ""
-    flag_present = "--flag" in parts
+    flag_present = "-flag" in parts
 
     if flag_present:
         # ... process flag ...
@@ -275,7 +296,7 @@ For scripts with multiple related commands, consider consolidating them under a 
 ```python
 @bot.command(
     name="maincommand",
-    usage="<subcommand> [args] OR <default_action_arg> [--flags]",
+    usage="<subcommand> [args] OR <default_action_arg> [-flags]",
     description="Main command with subcommands for various actions."
 )
 async def main_command(ctx, *, args: str):
@@ -365,6 +386,7 @@ If no subcommand is matched, performs the default action (e.g., fetching data fo
 -   **Consistent Parsing**: Handle arguments (`subargs`) consistently across subcommands.
 -   **Error Handling**: Provide clear messages for invalid subcommands or missing arguments.
 -   **Documentation**: Update the main script docstring and the command's `usage`/`description` to reflect the subcommand structure.
+
 
 ### 4.4 Event Listeners (@bot.listen)
 
@@ -526,127 +548,113 @@ NightyScript provides several ways to send messages:
    - **The only way to send rich embed messages.** Do *not* attempt to use `discord.Embed`.
    - Sends an embed to a *specific* channel ID.
    - Requires keyword arguments.
+   - **WARNING:** Only supports a limited set of parameters. Using unsupported parameters will raise errors like "unexpected keyword argument".
 
    ```python
    # Example within a command context
    await forwardEmbedMethod(
-       channel_id=ctx.channel.id, # Target the command's channel
-       content="Optional text content **outside** the embed.", # Supports Markdown
-       title="This is the Embed Title",
-       description="This is the main embed body.\nSupports **Markdown** and [links](https://example.com).",
-       # color=0x3498db, # Optional: Integer color code (Hex: 0xRRGGBB) - Currently may not be supported reliably.
-       image="https://example.com/image.png", # Optional: URL of an image to display large
-       thumbnail="https://example.com/thumb.png" # Optional: URL of a smaller thumbnail image
-       # footer={"text": "Footer text", "icon_url": "https://example.com/icon.png"} # Optional: Footer - Currently may not be supported reliably.
-       # fields=[ # Optional: List of fields - Currently may not be supported reliably.
-       #     {"name": "Field 1 Title", "value": "Field 1 Value", "inline": True},
-       #     {"name": "Field 2 Title", "value": "Field 2 Value", "inline": True}
-       # ]
+       channel_id=ctx.channel.id, # Target the command's channel (REQUIRED)
+       content="# Important Announcement\n\n**Bold text** and *italic text*\n\n> Important note here\n\n- Bullet point 1\n- Bullet point 2\n  - Nested bullet\n\n1. Numbered item\n2. Second item\n\n[Link to documentation](https://example.com)", # Text with markdown formatting
+       title="Message Title", # Optional title for the embed
+       image="https://example.com/image.png" # Optional URL of an image to display
    )
 
    # Example within an event listener (sending to a specific log channel)
    log_channel_id = "123456789012345678" # Get from config or JSON
    await forwardEmbedMethod(
        channel_id=log_channel_id,
-       title="Event Logged",
-       description=f"User {message.author.mention} triggered an event.",
-       # ... other embed parameters ...
+       content=f"# Event Detected\n\n**User:** {message.author}\n**Time:** {message.created_at}\n\n> Message content: {message.content}"
    )
    ```
 
-   **`forwardEmbedMethod` Parameters:**
+   **`forwardEmbedMethod` Supported Parameters:**
    - `channel_id`: (Required) The ID of the target channel (string or integer).
-   - `content`: (Optional) Text message content sent alongside the embed.
+   - `content`: (Optional) Text message content with markdown support (see below).
    - `title`: (Optional) The title of the embed.
-   - `description`: (Optional) The main text content of the embed (Markdown supported).
    - `image`: (Optional) URL for a large image within the embed.
-   - `thumbnail`: (Optional) URL for a small thumbnail image in the corner.
-   - `color`, `footer`, `fields`: While part of standard embeds, these might have limited or no support in `forwardEmbedMethod`. Test carefully. Use `title`, `description`, `image`, and `thumbnail` primarily.
+
+   **Supported Markdown in `content`:**
+   - Headings: `# Heading 1`, `## Heading 2`, etc. (only first level renders properly)
+   - Text formatting: `**bold**`, `*italic*`, `__underline__`, `~~strikethrough~~`
+   - Block quotes: `> quoted text`
+   - Lists: Bullet points with `-` and numbered lists with `1.`, `2.`, etc.
+   - Nested lists: Indent with spaces for nested bullets
+   - Links: `[link text](https://example.com)`
+
+   **WARNING:** Parameters like `thumbnail`, `description`, `color`, `footer`, and `fields` are **NOT supported** and will cause errors. To create formatted messages, use markdown within the `content` parameter instead.
 
 #### 4.6.3 Disabling Private Mode for Embeds
 
-   Nighty's "private mode" can sometimes interfere with sending embeds, especially if the script fetches external data. To ensure delivery, temporarily disable it:
+Nighty's "private mode" can block outgoing messages like embeds — especially when the script pulls from external sources.
+To ensure your embed sends successfully, **temporarily disable private mode** during the send.
 
-   ```python
-   # Save current private setting
-   current_private_setting = getConfigData().get("private", False) # Default to False if not set
+```python
+# Backup current private mode setting (could be True, False, or None)
+current_private = getConfigData().get("private")
 
-   try:
-       # Temporarily disable private mode if it was enabled
-       if current_private_setting:
-           updateConfigData("private", False)
+# Disable private mode
+updateConfigData("private", False)
 
-       # --- Send the embed ---
-       await forwardEmbedMethod(
-           channel_id=ctx.channel.id,
-           title="Important Update",
-           description="Data fetched and displayed.",
-           image="some_image_url"
-       )
-       # --- Embed sent ---
+try:
+    # Send the embed
+    await forwardEmbedMethod(
+        channel_id=ctx.channel.id,
+        content="Your embed content",
+        title="Your Embed Title"
+    )
+except Exception as e:
+    print(f"Failed to send embed: {e}", type_="ERROR")
+finally:
+    # Always restore the original private setting (even if it was None)
+    updateConfigData("private", current_private)
+```
 
-   except Exception as e:
-       print(f"Error sending embed: {e}", type_="ERROR")
-       # Optionally send a plain text error to the user
-       # await ctx.send("Failed to send embed message.")
-   finally:
-       # --- IMPORTANT: Restore the original private setting ---
-       # Check if the setting was originally different from the current one before restoring
-       if getConfigData().get("private") != current_private_setting:
-            updateConfigData("private", current_private_setting)
+#### 4.6.4 Sending Stickers
 
-   ```
-   *Self-correction:* The `finally` block should restore the *original* setting regardless of its current state, in case an error occurred *before* the `updateConfigData("private", False)` line executed fully or if another part of the code changed it unexpectedly. Simplified the finally block.
+Discord allows bots to send both built-in and custom stickers. Use the `stickers` parameter of `ctx.send` and retrieve the sticker from the cache before falling back to an HTTP fetch. This avoids unnecessary network calls and speeds up repeat usage.
 
-   ```python
-   # (Inside an async function)
-   current_private_setting = getConfigData().get("private") # Get original value (could be None, True, False)
+```python
+STICKER_ID = 749054660769218631  # example ID for the "wave" sticker
+sticker = bot.get_sticker(STICKER_ID)
+if not sticker:
+    sticker = await bot.fetch_sticker(STICKER_ID)
+await ctx.send(stickers=[sticker])
+```
 
-   try:
-       # Disable private mode before sending
-       updateConfigData("private", False)
+`bot.get_sticker` returns `None` if the sticker is not cached. For custom stickers—those uploaded to a guild you have access to—you may need to fetch them the first time with `fetch_sticker`. Once fetched, they remain in the cache for subsequent calls to `get_sticker`.
 
-       # Send the embed
-       await forwardEmbedMethod(
-           channel_id=ctx.channel.id,
-           content="Embed Content",
-           title="Embed Title"
-       )
+#### 4.6.5 Sending Emojis
 
-   except Exception as e:
-       print(f"Error during embed sending: {e}", type_="ERROR")
-   finally:
-       # ALWAYS restore the original setting in the finally block
-       # This ensures it's restored even if errors occur
-       if current_private_setting is not None: # Only restore if it was explicitly set before
-           updateConfigData("private", current_private_setting)
-       else:
-           # If 'private' was never set, perhaps remove the key or set to a default 'False'?
-           # Or simply do nothing if None means default behavior. For safety, explicitly setting to False:
-           updateConfigData("private", False) # Or handle how 'None' should be treated
-   ```
-   *Self-correction 2:* The goal is simply to ensure the embed sends and then restore the *exact previous state*. The first example's logic was simpler and safer. Revert to that structure.
+Custom guild emojis work similarly to stickers. Retrieve the emoji from the cache using
+`bot.get_emoji`. If the emoji isn’t cached, send the raw `<:emoji:ID>` string instead.
 
-   ```python
-    # Save current private setting and update it to False (disable private mode)
-    current_private = getConfigData().get("private") # Will be None if not set, or True/False
-    updateConfigData("private", False)
+```python
+EMOJI_ID = 123456789012345678  # example custom emoji
+emoji = bot.get_emoji(EMOJI_ID)
+if emoji:
+    await ctx.send(str(emoji))
+else:
+    await ctx.send(f"<:emoji:{EMOJI_ID}>")
+```
 
-    try:
-        # Send the embed message
-        await forwardEmbedMethod(
-            channel_id=ctx.channel.id,
-            content="Your embed content",
-            title="Your Embed Title",
-            # ... other parameters
-        )
-    except Exception as e:
-        print(f"Failed to send embed: {e}", type_="ERROR")
-        # Optionally inform the user via ctx.send
-    finally:
-        # Restore the original private setting, whatever it was (None, True, or False)
-        updateConfigData("private", current_private)
-   ```
+`get_emoji` returns `None` when the emoji isn’t cached or accessible. If the bot lacks access
+to the emoji, the raw string will not render properly.
+
+#### 4.6.6 Silent Messages
+
+Use the `silent=True` parameter with `ctx.send` for quick follow‑up or status
+updates that do not need to ping or notify other users. This is especially
+helpful in direct messages where every notification creates a ping. A "nothing
+burger" confirmation (e.g., "Note added.") can be sent silently so it appears in
+the chat history without generating a new notification.
+
+```python
+msg = await ctx.send("Processing...", silent=True)  # no ping for temporary status
+# ...do work...
+await msg.delete()
+```
+
+
 
 ### 4.7 Webhook Integration
 
@@ -909,7 +917,7 @@ NightyScript is built on `asyncio`. Blocking operations (like long-running compu
 
 ### 5.1 HTTP Requests with aiohttp
 
-**`aiohttp` (Recommended for HTTP Requests):**
+**`aiohttp` (NOT Recommended for HTTP Requests):**
    Use `aiohttp` for non-blocking web requests within `async` functions.
 
    ```python
