@@ -1,6 +1,6 @@
 # NightyScript Documentation v4.3 (Public)
 
-**Created by:** thedorekaczynski
+**Created by:** rico
 
 **Made with:** [manus.im](https://manus.im) and [claude.ai](https://claude.ai)
 
