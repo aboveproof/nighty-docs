@@ -911,6 +911,399 @@ if getConfigData().get(f"{SCRIPT_NAME}_debug_enabled") is None:
 5.  **Consistency**: Use a consistent format (like the helper function provides) across your script. Prefixing with the script name is vital when multiple scripts are running.
 6.  **Avoid Sensitive Data**: Be careful not to log passwords, API keys, or private user information.
 
+# 4.9 Executing Slash Commands
+
+NightyScript provides the ability to programmatically execute Discord slash commands from other bots. This is useful for automating interactions with bot commands or creating workflows that chain multiple bot actions together.
+
+## 4.9.1 The exec_slash Function
+
+The `exec_slash` function allows you to execute slash commands by interacting directly with Discord's interaction system.
+
+### Function Signature
+
+```python
+async def exec_slash(ctx, application_id: str, cmdn: str, opt: dict = None):
+    """
+    Executes a Discord slash command programmatically.
+    
+    Args:
+        ctx: Command context (required for guild/channel info)
+        application_id: The application ID of the bot whose command you want to execute
+        cmdn: The command name (supports subcommands with space separation)
+        opt: Optional dictionary of command options/parameters
+    """
+```
+
+### Parameters
+
+- **`ctx`**: The command context. Required to determine the guild and channel where the slash command should be executed.
+- **`application_id`**: The Discord application ID (as a string) of the bot that owns the command. You can find this by enabling Developer Mode in Discord, right-clicking the bot's message, and selecting "Copy ID" on the bot's profile.
+- **`cmdn`**: The command name as a string. For subcommands, use space separation (e.g., `"command subcommand"` or `"command subgroup subcommand"`).
+- **`opt`**: Optional dictionary mapping parameter names to their values. The keys must match the exact parameter names defined in the slash command.
+
+### Complete Implementation
+
+Add this helper function to your script:
+
+```python
+import discord
+import traceback
+from datetime import datetime
+
+async def exec_slash(ctx, application_id: str, cmdn: str, opt: dict = None):
+    """
+    Executes a Discord slash command programmatically.
+    
+    Args:
+        ctx: Command context (required for guild/channel info)
+        application_id: The application ID of the bot whose command you want to execute
+        cmdn: The command name (supports subcommands with space separation)
+        opt: Optional dictionary of command options/parameters
+    """
+    opt = opt or {}
+    top_command_name = cmdn.split(' ')[0]
+    
+    try:
+        # Search for the command in the guild's application command index
+        search_url = f'/guilds/{ctx.guild.id}/application-command-index'
+        response_data = await bot.http.request(discord.http.Route('GET', search_url))
+        
+        # Find the command by application ID and name
+        full_cmd_data = None
+        for cmd_data in response_data.get('application_commands', []):
+            if str(cmd_data['application_id']) == application_id and cmd_data['name'] == top_command_name:
+                full_cmd_data = cmd_data
+                break
+        
+        if not full_cmd_data:
+            print(f"Error: Could not find a command named '{top_command_name}' for application ID {application_id} in this guild.", type_="ERROR")
+            return
+        
+    except Exception as e:
+        print(f"Error: Could not search for application commands. {e}", type_="ERROR")
+        traceback.print_exc()
+        return
+    
+    # Navigate subcommand structure if needed
+    parts = cmdn.split(' ')
+    target_cmd_data = full_cmd_data
+    if len(parts) > 1:
+        for part_name in parts[1:]:
+            options_map = {o['name']: o for o in target_cmd_data.get('options', [])}
+            target_cmd_data = options_map.get(part_name)
+            if not target_cmd_data:
+                print(f"Error: Could not find subcommand path '{cmdn}'.", type_="ERROR")
+                return
+    
+    # Format options with correct types
+    formatted_opts = []
+    if opt and target_cmd_data.get('options'):
+        final_options_map = {o['name']: o for o in target_cmd_data.get('options', [])}
+        for name, value in opt.items():
+            param_info = final_options_map.get(name)
+            if param_info:
+                formatted_opts.append({
+                    "type": param_info['type'],
+                    "name": name,
+                    "value": value
+                })
+    
+    # Build payload structure based on command depth
+    payload_options = []
+    if len(parts) > 2:  # Command with subgroup and subcommand
+        payload_options = [{
+            "type": 2,
+            "name": parts[1],
+            "options": [{
+                "type": 1,
+                "name": parts[2],
+                "options": formatted_opts
+            }]
+        }]
+    elif len(parts) > 1:  # Command with subcommand
+        payload_options = [{
+            "type": 1,
+            "name": parts[1],
+            "options": formatted_opts
+        }]
+    else:  # Top-level command
+        payload_options = formatted_opts
+    
+    # Construct the interaction payload
+    payload = {
+        "type": 2,
+        "application_id": application_id,
+        "guild_id": str(ctx.guild.id) if ctx.guild else None,
+        "channel_id": str(ctx.channel.id),
+        "session_id": bot.ws.session_id,
+        "nonce": str(int(datetime.now().timestamp() * 1000)),
+        "data": {
+            "version": full_cmd_data['version'],
+            "id": full_cmd_data['id'],
+            "name": full_cmd_data['name'],
+            "type": full_cmd_data['type'],
+            "options": payload_options,
+            "application_command": full_cmd_data,
+            "attachments": []
+        }
+    }
+    
+    try:
+        await bot.http.request(
+            discord.http.Route('POST', '/interactions'),
+            json=payload
+        )
+        print(f"Successfully executed '{cmdn}'", type_="SUCCESS")
+    
+    except Exception as e:
+        print(f"Error: Failed to execute '{cmdn}': {e}", type_="ERROR")
+        traceback.print_exc()
+```
+
+## 4.9.2 Usage Examples
+
+### Basic Command Execution
+
+```python
+@bot.command(name="ping", description="Execute a bot's ping command")
+async def execute_ping(ctx, *, bot_id: str):
+    await ctx.message.delete()
+    
+    # Execute a simple /ping command
+    await exec_slash(ctx, application_id=bot_id, cmdn="ping")
+```
+
+### Command with Parameters
+
+```python
+@bot.command(name="roll", description="Execute a dice roll command")
+async def execute_roll(ctx, *, args: str):
+    await ctx.message.delete()
+    
+    parts = args.split()
+    bot_id = parts[0]
+    dice = parts[1] if len(parts) > 1 else "1d6"
+    
+    # Execute /roll with a dice parameter
+    await exec_slash(
+        ctx,
+        application_id=bot_id,
+        cmdn="roll",
+        opt={"dice": dice}
+    )
+```
+
+### Subcommand Execution
+
+```python
+@bot.command(name="config", description="Execute a bot's config command")
+async def execute_config(ctx, *, args: str):
+    await ctx.message.delete()
+    
+    # Execute /config set with parameters
+    # Command structure: /config set <setting> <value>
+    bot_id = "123456789012345678"
+    
+    await exec_slash(
+        ctx,
+        application_id=bot_id,
+        cmdn="config set",
+        opt={
+            "setting": "prefix",
+            "value": "!"
+        }
+    )
+```
+
+### Complex Example with Error Handling
+
+```python
+@bot.command(name="autoplay", description="Execute music bot commands")
+async def autoplay_music(ctx, *, song_name: str):
+    await ctx.message.delete()
+    
+    music_bot_id = getConfigData().get("music_bot_id")
+    if not music_bot_id:
+        await ctx.send("Music bot ID not configured. Use `<p>setmusicbot <id>`")
+        return
+    
+    try:
+        # First, execute /play command
+        await exec_slash(
+            ctx,
+            application_id=music_bot_id,
+            cmdn="play",
+            opt={"query": song_name}
+        )
+        
+        # Wait a moment for the song to start
+        await asyncio.sleep(2)
+        
+        # Then execute /loop command
+        await exec_slash(
+            ctx,
+            application_id=music_bot_id,
+            cmdn="loop",
+            opt={"mode": "track"}
+        )
+        
+        print(f"Successfully started playing '{song_name}' on loop", type_="SUCCESS")
+        
+    except Exception as e:
+        print(f"Error executing music commands: {e}", type_="ERROR")
+        await ctx.send(f"Failed to play song: {e}")
+
+@bot.command(name="setmusicbot", description="Set the music bot application ID")
+async def set_music_bot(ctx, *, bot_id: str):
+    await ctx.message.delete()
+    try:
+        # Validate it's a valid ID (all digits)
+        if bot_id.isdigit():
+            updateConfigData("music_bot_id", bot_id)
+            await ctx.send("Music bot ID updated successfully.")
+        else:
+            await ctx.send("Invalid bot ID format.")
+    except Exception as e:
+        await ctx.send(f"Error setting music bot ID: {e}")
+```
+
+## 4.9.3 Finding Application IDs
+
+To find a bot's application ID:
+
+1. Enable Developer Mode in Discord (User Settings → Advanced → Developer Mode)
+2. Right-click on a message from the bot
+3. Click "Copy Message ID" or right-click the bot's profile and select "Copy ID"
+4. The bot's user ID is typically the same as its application ID
+
+Alternatively, you can:
+- Check the bot's invite link (it contains the application ID)
+- Use Discord's API to fetch application command data
+- Ask the bot owner for the application ID
+
+## 4.9.4 Important Notes and Limitations
+
+### Rate Limiting
+- Discord rate-limits interaction requests
+- Avoid executing many slash commands in rapid succession
+- Add delays between commands using `await asyncio.sleep(seconds)`
+
+### Guild Requirement
+- The `exec_slash` function requires a guild context
+- It will not work in DMs
+- The bot whose command you're executing must be in the same guild
+
+### Command Discovery
+- The function automatically discovers command structure
+- It fetches the command schema from Discord's API
+- If a command doesn't exist in the guild, it will fail gracefully
+
+### Parameter Types
+- The function automatically matches parameter types from the command schema
+- Common types include:
+  - Type 3: String
+  - Type 4: Integer
+  - Type 5: Boolean
+  - Type 6: User
+  - Type 7: Channel
+  - Type 8: Role
+
+### Error Handling
+- Always wrap `exec_slash` calls in try-except blocks
+- Log errors using the standard logging pattern
+- Provide user feedback when commands fail
+
+## 4.9.5 Best Practices
+
+1. **Store Bot IDs in Configuration**
+   ```python
+   # Initialize in your script_function
+   if not getConfigData().get("target_bot_id"):
+       updateConfigData("target_bot_id", "123456789012345678")
+   ```
+
+2. **Validate Command Availability**
+   ```python
+   # Check if the bot is in the guild before executing
+   if ctx.guild:
+       guild_members = [m.id for m in ctx.guild.members]
+       bot_id_int = int(bot_id)
+       if bot_id_int not in guild_members:
+           await ctx.send("That bot is not in this server.")
+           return
+   ```
+
+3. **Add Delays for Sequential Commands**
+   ```python
+   await exec_slash(ctx, bot_id, "command1")
+   await asyncio.sleep(1)  # Wait before next command
+   await exec_slash(ctx, bot_id, "command2")
+   ```
+
+4. **Document Required Bot IDs**
+   ```python
+   def script_function():
+       """
+       AUTO SLASH EXECUTOR
+       ------------------
+       
+       Automatically executes slash commands from other bots.
+       
+       SETUP:
+       1. Find the target bot's application ID
+       2. Set it using: <p>setbotid <application_id>
+       
+       COMMANDS:
+       <p>exec <command> - Execute a slash command
+       
+       NOTES:
+       - The target bot must be in the same server
+       - Requires Developer Mode to find application IDs
+       """
+   ```
+
+5. **Handle Missing Parameters Gracefully**
+   ```python
+   @bot.command(name="exec")
+   async def execute_command(ctx, *, args: str):
+       await ctx.message.delete()
+       
+       if not args:
+           await ctx.send("Usage: `<p>exec <command> [parameters]`")
+           return
+       
+       bot_id = getConfigData().get("target_bot_id")
+       if not bot_id:
+           await ctx.send("Bot ID not configured. Use `<p>setbotid <id>`")
+           return
+       
+       await exec_slash(ctx, bot_id, args)
+   ```
+
+## 4.9.6 Security Considerations
+
+- **Bot Permissions**: The executed command runs with the permissions of the target bot, not your selfbot
+- **Command Visibility**: Slash command executions are visible to all users in the channel
+- **Rate Limits**: Excessive command execution may trigger Discord's rate limiting
+- **Bot Bans**: Automating bot commands may violate some bots' terms of service
+
+## 4.9.7 Troubleshooting
+
+### "Could not find command" Error
+- Verify the bot is in the guild
+- Check that the command name is spelled correctly
+- Ensure the command is actually a slash command (not a prefix command)
+
+### "Failed to execute" Error
+- Check Discord's Developer Console for detailed errors
+- Verify you have permission to use the command in that channel
+- Ensure all required parameters are provided
+
+### Commands Execute But Nothing Happens
+- Some bots may require specific permissions
+- The bot may be rate-limited or offline
+- Check if the bot sends a response to a different channel
+
 ## 5. Asynchronous Operations
 
 NightyScript is built on `asyncio`. Blocking operations (like long-running computations, standard file I/O, or network requests using `requests`) will freeze the bot. Always use asynchronous alternatives when possible.
