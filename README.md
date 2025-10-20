@@ -1188,11 +1188,6 @@ Alternatively, you can:
 - Avoid executing many slash commands in rapid succession
 - Add delays between commands using `await asyncio.sleep(seconds)`
 
-### Guild Requirement
-- The `exec_slash` function requires a guild context
-- It will not work in DMs
-- The bot whose command you're executing must be in the same guild
-
 ### Command Discovery
 - The function automatically discovers command structure
 - It fetches the command schema from Discord's API
