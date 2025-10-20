@@ -965,7 +965,7 @@ async def exec_slash(ctx, application_id: str, cmdn: str, opt: dict = None):
     
     try:
         # Search for the command in the guild's application command index
-        search_url = f'/guilds/{ctx.guild.id}/application-command-index'
+        search_url = f'/users/@me/application-command-index'
         response_data = await bot.http.request(discord.http.Route('GET', search_url))
         
         # Find the command by application ID and name
