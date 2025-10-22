@@ -1,6 +1,6 @@
 # NightyScript Documentation v4.9 (Public)
 
-**Created by:** thedorekaczynski
+**Maintained by:** __rico__ | 1361736124858630274
 
 **Made with:** [manus.im](https://manus.im) and [claude.ai](https://claude.ai)
 
@@ -1437,3 +1437,5 @@ Scripts focused on loading, saving, and managing data stored in JSON files, ofte
 
 ### 6.6 User and Member Interaction
 Work with specific, accessible users - not global user databases. Due to Discord API limitations (as noted in Section 1), scripts cannot scan across all servers for mutual friends or build comprehensive user databases. Instead, focus on interacting with users who send messages in accessible channels or are explicitly specified by ID.
+
+**Originally by:** __thedorekaczynski__
