@@ -313,4 +313,5 @@ The [`example-scripts`](example-scripts) directory also covers JSON storage, con
 
 ## License
 
-[GNU](LICENSE)
+[GNU General Public License v3.0
+](LICENSE)
