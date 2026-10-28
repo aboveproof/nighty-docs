@@ -26,7 +26,6 @@ def puppeteer_screenshot():
       displayed to help debug problems.
     """
     import asyncio
-    import discord
     import os
     from pathlib import Path
     import uuid

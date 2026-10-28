@@ -24,7 +24,6 @@ def website_screenshot():
     """
     import aiohttp
     import io
-    import discord
 
     async def fetch_screenshot_bytes(target_url: str):
         screenshot_url = f"https://image.thum.io/get/png/{target_url}"

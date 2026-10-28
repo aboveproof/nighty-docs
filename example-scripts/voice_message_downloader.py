@@ -23,7 +23,6 @@ def voice_message_downloader():
     - Works with voice messages that are sent as audio attachments
     """
     import re
-    import discord
 
     MESSAGE_URL_RE = re.compile(
         r"https?://(?:ptb\\.|canary\\.)?discord(?:app)?\\.com/channels/(\\d+)/(\\d+)/(\\d+)"
