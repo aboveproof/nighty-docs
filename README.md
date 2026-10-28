@@ -1,21 +1,55 @@
-# NightyScript Documentation v5.0
+<a id="top"></a>
 
-Public reference for Nighty scripts, native slash commands, Discord Components V2, and custom Nighty tabs.
+<div align="center">
 
-**Maintained by:** __rico__ | `1361736124858630274`
+<h1>NightyScript Documentation</h1>
 
-**Made with:** [manus.im](https://manus.im), [Claude](https://claude.ai), and [OpenAI Codex](https://openai.com/codex/)
+<h3>Version 5.0</h3>
 
-## Start here
+<p>Public reference for Nighty scripts, native slash commands, Discord Components V2, and custom Nighty tabs.</p>
 
-- [Native slash commands](docs/slash-commands.md)
-- [Discord Components V2](docs/components-v2.md)
-- [CUI and custom tabs](docs/cui.md)
-- [Reload-safe scripts](docs/reload-safety.md)
-- [Troubleshooting](docs/troubleshooting.md)
-- [Example scripts](#example-scripts)
+<p>
+  <img alt="Documentation version" src="https://img.shields.io/badge/docs-v5.0-5865F2?style=for-the-badge">
+  <img alt="Slash commands" src="https://img.shields.io/badge/slash_commands-supported-2EA44F?style=for-the-badge">
+  <img alt="Components V2" src="https://img.shields.io/badge/Components-V2-EB459E?style=for-the-badge">
+  <img alt="CUI" src="https://img.shields.io/badge/CUI-documented-0EA5E9?style=for-the-badge">
+</p>
 
-## NightyScript model
+<p>
+  <a href="#quick-start"><strong>Quick start</strong></a>
+  ·
+  <a href="#documentation"><strong>Documentation</strong></a>
+  ·
+  <a href="#example-scripts"><strong>Examples</strong></a>
+  ·
+  <a href="#troubleshooting"><strong>Troubleshooting</strong></a>
+</p>
+
+<p><strong>Maintained by:</strong> <u>rico</u> · <code>1361736124858630274</code></p>
+
+<p><strong>Made with:</strong> <a href="https://manus.im">manus.im</a> · <a href="https://claude.ai">Claude</a> · <a href="https://openai.com/codex/">OpenAI Codex</a></p>
+
+</div>
+
+---
+
+> [!NOTE]
+> Nighty injects its scripting objects at runtime. Do not install or import `nighty` or `discord.py` inside a NightyScript.
+
+## Documentation
+
+| Guide | Covers |
+| --- | --- |
+| [Native slash commands](docs/slash-commands.md) | Typed options, command groups, autocomplete, contexts, and sync |
+| [Discord Components V2](docs/components-v2.md) | Containers, sections, text displays, media, separators, and callbacks |
+| [CUI and custom tabs](docs/cui.md) | Custom HTML elements, callbacks, pagination, and browser reloads |
+| [Reload-safe scripts](docs/reload-safety.md) | Tasks, listeners, sockets, cleanup, and shared runtime state |
+| [Troubleshooting](docs/troubleshooting.md) | Common load, interaction, CUI, storage, and event-loop failures |
+| [Example scripts](#example-scripts) | Complete files ready to inspect and adapt |
+
+## Quick start
+
+### 1. Understand the runtime
 
 Nighty runs scripts inside its own Python process. Nighty supplies `bot`, `bot_app`, `nightyScript`, `Tab`, `UI`, configuration helpers, theme helpers, and Discord objects.
 
@@ -31,7 +65,7 @@ from nighty import *
 
 Use standard-library imports and dependencies documented by the script. Keep imports inside the decorated function when Nighty callbacks need them. Nighty may execute a script with separate global and local namespaces.
 
-## Script skeleton
+### 2. Start with the script wrapper
 
 ```python
 @nightyScript(
@@ -63,7 +97,18 @@ channel_notes()
 
 Call the decorated function at the end of the file. Nighty will not register the script until that call runs.
 
-## Configuration
+### 3. Pick the right interface
+
+- Use `@bot.command` for prefix commands.
+- Use [nighty-slash-api](docs/slash-commands.md) for native application commands.
+- Use `Tab`, `UI`, and [CUI](docs/cui.md) for Nighty settings pages.
+- Use [Components V2](docs/components-v2.md) for structured Discord interaction responses.
+
+---
+
+## Core reference
+
+### Configuration
 
 Use Nighty's configuration store for booleans, strings, and numbers:
 
@@ -74,7 +119,7 @@ updateConfigData("channel_notes_enabled", False)
 
 Prefix keys with the script name. This prevents collisions with other scripts.
 
-## JSON storage
+### JSON storage
 
 Use a JSON file for lists and nested data:
 
@@ -107,7 +152,7 @@ def save_notes(data):
 
 Store tokens and webhook URLs outside source files. Do not commit runtime JSON files.
 
-## Prefix commands
+### Prefix commands
 
 ```python
 @bot.command(
@@ -146,7 +191,7 @@ async def notes_command(ctx, *, args: str = ""):
         await ctx.send("Use `notes add`, `notes list`, or `notes clear`.", silent=True)
 ```
 
-## Event listeners
+### Event listeners
 
 ```python
 @bot.listen("on_message")
@@ -162,6 +207,8 @@ async def message_listener(message):
 Filter events before network calls or file access. A listener runs for each matching Discord event.
 
 Nighty keeps the Python process alive during script reloads. Scripts with listeners, tasks, or Socket.IO callbacks need cleanup code. Read [Reload-safe scripts](docs/reload-safety.md).
+
+---
 
 ## Messages
 
@@ -247,7 +294,11 @@ tab.render()
 
 CUI adds custom HTML elements and callable overlays without changing the parent creation rules. Read [CUI and custom tabs](docs/cui.md).
 
-## Async work
+---
+
+## Runtime safety
+
+### Async work
 
 Use `aiohttp` for network requests:
 
@@ -272,7 +323,7 @@ async def run_blocking(function, *args):
 
 Use `asyncio.sleep()` inside async functions. `time.sleep()` blocks Nighty's event loop.
 
-## Logging
+### Logging
 
 ```python
 print("[Task Queue] Loaded 12 tasks", type_="INFO")
@@ -303,6 +354,22 @@ The [`example-scripts`](example-scripts) directory also covers JSON storage, con
 - CUI runs in Nighty's browser page. A browser refresh creates a new JavaScript window.
 - Discord rate limits apply to messages, command syncs, and interaction callbacks.
 
+<a id="troubleshooting"></a>
+
+## Troubleshooting
+
+Start with the dedicated [troubleshooting guide](docs/troubleshooting.md). It covers script load failures, missing slash commands, expired interactions, raw CUI placeholders, browser refresh problems, JSON write errors, and event-loop failures.
+
+When reporting a bug, include:
+
+- the full Nighty console error;
+- the action that caused it;
+- whether the script was freshly loaded or reloaded;
+- whether Nighty Desktop or the web interface was used;
+- the smallest script that still reproduces it.
+
+---
+
 ## Credits
 
 - [lord-m1nx/nighty-slash-api](https://github.com/lord-m1nx/nighty-slash-api) for the native slash-command framework
@@ -313,5 +380,10 @@ The [`example-scripts`](example-scripts) directory also covers JSON storage, con
 
 ## License
 
-[GNU General Public License v3.0
-](LICENSE)
+Released under the [GNU General Public License v3.0](LICENSE).
+
+<div align="center">
+  <sub>NightyScript Documentation v5.0</sub>
+  <br>
+  <a href="#top"><strong>Back to top</strong></a>
+</div>
