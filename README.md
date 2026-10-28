@@ -6,10 +6,11 @@
 
 <h3>Version 5.0</h3>
 
-<p>Public reference for Nighty scripts, native slash commands, Discord Components V2, and custom Nighty tabs.</p>
+<p>Public reference for Nighty scripts, native UI scripting, slash commands, Discord Components V2, and CUI.</p>
 
 <p>
   <img alt="Documentation version" src="https://img.shields.io/badge/docs-v5.0-5865F2?style=for-the-badge">
+  <img alt="UI scripting" src="https://img.shields.io/badge/UI_scripting-documented-F59E0B?style=for-the-badge">
   <img alt="Slash commands" src="https://img.shields.io/badge/slash_commands-supported-2EA44F?style=for-the-badge">
   <img alt="Components V2" src="https://img.shields.io/badge/Components-V2-EB459E?style=for-the-badge">
   <img alt="CUI" src="https://img.shields.io/badge/CUI-documented-0EA5E9?style=for-the-badge">
@@ -40,6 +41,7 @@
 
 | Guide | Covers |
 | --- | --- |
+| [Native UI scripting](docs/ui-scripting.md) | Tabs, containers, cards, groups, controls, tables, callbacks, and responsive layouts |
 | [Native slash commands](docs/slash-commands.md) | Typed options, command groups, autocomplete, contexts, and sync |
 | [Discord Components V2](docs/components-v2.md) | Containers, sections, text displays, media, separators, and callbacks |
 | [CUI and custom tabs](docs/cui.md) | Custom HTML elements, callbacks, pagination, and browser reloads |
@@ -101,7 +103,8 @@ Call the decorated function at the end of the file. Nighty will not register the
 
 - Use `@bot.command` for prefix commands.
 - Use [nighty-slash-api](docs/slash-commands.md) for native application commands.
-- Use `Tab`, `UI`, and [CUI](docs/cui.md) for Nighty settings pages.
+- Use [`Tab` and `UI`](docs/ui-scripting.md) for native Nighty settings pages.
+- Add [CUI](docs/cui.md) when a native page needs a custom control or overlay.
 - Use [Components V2](docs/components-v2.md) for structured Discord interaction responses.
 
 ---
@@ -255,7 +258,7 @@ slash.autosync()
 
 The API enables guild, direct-message, and private-channel contexts when the installed Nighty build exposes those decorators. Read [Native slash commands](docs/slash-commands.md) before adding the framework block.
 
-## CUI and custom tabs
+## Native UI scripting
 
 Nighty's native UI uses this hierarchy:
 
@@ -292,7 +295,11 @@ save_button.onClick = save_task
 tab.render()
 ```
 
-CUI adds custom HTML elements and callable overlays without changing the parent creation rules. Read [CUI and custom tabs](docs/cui.md).
+Read [Native UI scripting](docs/ui-scripting.md) for the full component reference, callbacks, tables, validation, responsive layouts, and debugging.
+
+## CUI extensions
+
+CUI adds custom HTML elements and callable overlays without changing the native parent creation rules. Use it for controls that Nighty's built-in `UI` classes do not provide. Read [CUI and custom tabs](docs/cui.md).
 
 ---
 
@@ -337,6 +344,7 @@ Include the script name and the failed operation. Keep tokens, cookies, and webh
 
 ### v5 examples
 
+- [`ui_example.py`](example-scripts/ui_example.py): native layouts, forms, validation, tables, callbacks, and toasts
 - [`slash_command_example.py`](example-scripts/slash_command_example.py): typed commands, groups, autocomplete, and contexts
 - [`components_v2_example.py`](example-scripts/components_v2_example.py): themed Components V2 interaction responses
 - [`cui_custom_element_example.py`](example-scripts/cui_custom_element_example.py): custom CUI element and callback
@@ -376,7 +384,7 @@ When reporting a bug, include:
 - cpores for CUI
 - nes at Nighty for the Components V2 theme builder and schema
 - [hardikpandya/stop-slop](https://github.com/hardikpandya/stop-slop) for the writing rules used in v5
-- thatdudepyro for the Nighty UI scripting reference
+- [ThatDudePyro/UI-Scripting-Docs](https://github.com/ThatDudePyro/UI-Scripting-Docs) for the Nighty UI scripting reference
 
 ## License
 

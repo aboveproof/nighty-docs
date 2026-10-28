@@ -2,6 +2,8 @@
 
 Nighty's UI API creates tabs, containers, cards, groups, and standard controls. CUI extends that API with custom HTML elements and callable overlays.
 
+Read [Native UI scripting](ui-scripting.md) first if the page only needs Nighty's built-in controls.
+
 Source: [vahrervert/cui](https://github.com/vahrervert/cui)
 
 ## Native hierarchy
