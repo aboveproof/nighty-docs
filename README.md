@@ -28,8 +28,6 @@
 
 <p><strong>Maintained by:</strong> <u>rico</u> · <code>1361736124858630274</code></p>
 
-<p><strong>Made with:</strong> <a href="https://manus.im">manus.im</a> · <a href="https://claude.ai">Claude</a> · <a href="https://openai.com/codex/">OpenAI Codex</a></p>
-
 </div>
 
 ---
@@ -42,8 +40,8 @@
 | Guide | Covers |
 | --- | --- |
 | [Native UI scripting](docs/ui-scripting.md) | Tabs, containers, cards, groups, controls, tables, callbacks, and responsive layouts |
-| [Native slash commands](docs/slash-commands.md) | Typed options, command groups, autocomplete, contexts, and sync |
-| [Discord Components V2](docs/components-v2.md) | Containers, sections, text displays, media, separators, and callbacks |
+| [Native slash commands](docs/slash-commands.md) | Typed options, groups, autocomplete, themed replies, and sync |
+| [Discord Components V2](docs/components-v2.md) | Native layouts, containers, buttons, sections, and callbacks |
 | [CUI and custom tabs](docs/cui.md) | Custom HTML elements, callbacks, pagination, and browser reloads |
 | [Reload-safe scripts](docs/reload-safety.md) | Tasks, listeners, sockets, cleanup, and shared runtime state |
 | [Troubleshooting](docs/troubleshooting.md) | Common load, interaction, CUI, storage, and event-loop failures |
@@ -102,7 +100,7 @@ Call the decorated function at the end of the file. Nighty will not register the
 ### 3. Pick the right interface
 
 - Use `@bot.command` for prefix commands.
-- Use [nighty-slash-api](docs/slash-commands.md) for native application commands.
+- Use `@slashCommand` for native application commands.
 - Use [`Tab` and `UI`](docs/ui-scripting.md) for native Nighty settings pages.
 - Add [CUI](docs/cui.md) when a native page needs a custom control or overlay.
 - Use [Components V2](docs/components-v2.md) for structured Discord interaction responses.
@@ -239,24 +237,19 @@ Supported arguments are `channel_id`, `title`, `content`, and `image`.
 
 ### Components V2
 
-Components V2 supports containers, text displays, sections, media, and separators. Slash interactions can send V2 payloads through Discord's interaction callback. Read [Discord Components V2](docs/components-v2.md).
+Components V2 supports containers, text displays, sections, media, and interactive controls. Use a `discord_bot.ui.LayoutView` when `slashReply()` does not provide the layout you need. Read [Discord Components V2](docs/components-v2.md).
 
 ## Native slash commands
 
-[nighty-slash-api](https://github.com/lord-m1nx/nighty-slash-api) registers commands on Nighty's `bot_app` tree. It supports typed options, groups, autocomplete, context menus, ephemeral responses, and hash-based synchronization.
+Nighty registers application commands with `@slashCommand` and sends themed replies with `slashReply()`.
 
 ```python
-# Paste the Slash API framework block inside this script function first.
-slash = SlashAPI(label="StatusTools")
-
-@slash.command(description="Show the script status")
-async def status(ctx):
-    await ctx.send("Status: ready", ephemeral=True)
-
-slash.autosync()
+@slashCommand(name="status", description="Show the script status")
+async def status(interaction: discord_bot.Interaction):
+    await slashReply(interaction, "Status: ready")
 ```
 
-The API enables guild, direct-message, and private-channel contexts when the installed Nighty build exposes those decorators. Read [Native slash commands](docs/slash-commands.md) before adding the framework block.
+Nighty syncs command changes after the script loads. Read [Native slash commands](docs/slash-commands.md) for options, subcommands, autocomplete, and custom Components V2 layouts.
 
 ## Native UI scripting
 
@@ -346,7 +339,7 @@ Include the script name and the failed operation. Keep tokens, cookies, and webh
 
 - [`ui_example.py`](example-scripts/ui_example.py): native layouts, forms, validation, tables, callbacks, and toasts
 - [`slash_command_example.py`](example-scripts/slash_command_example.py): typed commands, groups, autocomplete, and contexts
-- [`components_v2_example.py`](example-scripts/components_v2_example.py): themed Components V2 interaction responses
+- [`components_v2_example.py`](example-scripts/components_v2_example.py): native Components V2 counter with buttons
 - [`cui_custom_element_example.py`](example-scripts/cui_custom_element_example.py): custom CUI element and callback
 - [`reload_safe_worker.py`](example-scripts/reload_safe_worker.py): task and listener cleanup across reloads
 
@@ -358,7 +351,7 @@ The [`example-scripts`](example-scripts) directory also covers JSON storage, con
 
 - Nighty scripts cannot build a complete cross-server user database.
 - User and member access depends on Discord cache state and channel access.
-- Native slash commands depend on Nighty's `bot_app` connection and Discord registration.
+- Native slash commands depend on Nighty's application bot connection and Discord registration.
 - CUI runs in Nighty's browser page. A browser refresh creates a new JavaScript window.
 - Discord rate limits apply to messages, command syncs, and interaction callbacks.
 
@@ -380,10 +373,8 @@ When reporting a bug, include:
 
 ## Credits
 
-- [lord-m1nx/nighty-slash-api](https://github.com/lord-m1nx/nighty-slash-api) for the native slash-command framework
 - cpores for CUI
 - nes at Nighty for the Components V2 theme builder and schema
-- [hardikpandya/stop-slop](https://github.com/hardikpandya/stop-slop) for the writing rules used in v5
 - [ThatDudePyro/UI-Scripting-Docs](https://github.com/ThatDudePyro/UI-Scripting-Docs) for the Nighty UI scripting reference
 
 ## License

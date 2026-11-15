@@ -47,70 +47,31 @@ Use `asyncio.create_task()` only from a coroutine running on an event-loop threa
 
 ## Slash command does not appear
 
-- Put `slash.autosync()` after all slash decorators.
-- Give the script a unique Slash API label.
-- Check the console for Discord HTTP 400 details.
+- Confirm that `@slashCommand` is the top decorator.
+- Define the command while the script loads, inside the script function.
+- Check the console for a duplicate name or invalid command option.
 - Refresh Discord after the sync.
-- Use a development guild when the API version supports guild-scoped sync.
 
-Global command changes can take longer to reach Discord clients.
-
-## Slash command works in servers but not DMs
-
-The command needs user installation and private contexts. Current Slash API builds request:
-
-```python
-allowed_contexts(guilds=True, dms=True, private_channels=True)
-allowed_installs(guilds=True, users=True)
-```
-
-Check that Nighty's application-command library exposes those decorators. Reinstall the command for the user account after changing install contexts.
-
-Treat `ctx.guild` as optional in DM and user-installed contexts.
+Nighty syncs changes a few seconds after the script loads.
 
 ## `interaction already acknowledged`
 
-The handler sent two initial responses. Use one of these flows:
+The handler sent two initial responses. Use `slashReply()` for normal replies:
 
 ```python
-await ctx.send("Done", ephemeral=True)
+await slashReply(interaction, "Done")
 ```
 
-```python
-await ctx.defer(ephemeral=True)
-await ctx.send("Done", ephemeral=True)
-```
+Nighty auto-defers slash commands after 1.5 seconds. A custom layout must replace
+the deferred response or send a followup. Use the `send_v2()` helper in
+[Discord Components V2](components-v2.md).
 
-For raw Components V2, send the raw callback first. Use the webhook edit endpoint for later changes.
+## Components V2 callback fails
 
-## Components V2 returns HTTP 400
-
-Log the response body and check:
-
-- `flags` includes `1 << 15`.
-- Visible text sits inside component type 10.
-- Sections use type 9 and a valid accessory.
-- Containers use type 17.
-- Child component and text limits stay within Discord limits.
-- The payload does not mix standard content or embeds with V2 layout.
-
-## Components V2 theme does not load
-
-Read the active theme name from `getConfigData().get("theme")`, then call `getThemeData(theme_name=...)`.
-
-Check for:
-
-```json
-{
-  "v2": {
-    "enabled": true,
-    "color": "#5865F2",
-    "layout": [{"text": "{content}"}]
-  }
-}
-```
-
-Use a plain text-display container when the theme has no enabled V2 layout.
+- Respond to button and select interactions within three seconds.
+- Call `interaction.response.edit_message(view=view)` after changing a layout.
+- Rebuild the view before editing the message.
+- Use `slashReply()` when the command only needs themed text or images.
 
 ## CUI shows raw `__CUI__` text
 

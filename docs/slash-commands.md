@@ -1,283 +1,206 @@
 # Native slash commands
 
-Nighty exposes two Discord clients:
-
-- `bot` runs the user account connection and prefix commands.
-- `bot_app` owns the application-command tree used by slash commands.
-
-[lord-m1nx/nighty-slash-api](https://github.com/lord-m1nx/nighty-slash-api) wraps `bot_app.tree` with command decorators, response handling, state storage, and hash-based synchronization.
-
-## Choose the correct command type
-
-| Task | API |
-|---|---|
-| Create a text command that uses the Nighty prefix | `@bot.command` |
-| Register your own `/command` | `@slash.command` |
-| Run a slash command owned by another Discord application | `exec_slash` |
-
-`exec_slash` does not register commands. The Slash API does not invoke commands owned by other bots.
-
-## Install the framework block
-
-1. Open [`slashapi.py`](https://github.com/lord-m1nx/nighty-slash-api/blob/main/slashapi.py).
-2. Copy the code between the `SLASH API START` and `SLASH API END` markers.
-3. Paste that block inside your `@nightyScript` function.
-4. Create one `SlashAPI` instance with a label unique to the script.
-5. Define commands below the framework block.
-6. Call `slash.autosync()` after the command definitions.
-
-Do not import `discord`, `app_commands`, or `bot_app`. Nighty injects those names.
+Nighty scripts register application commands with `@slashCommand` and answer
+them with `slashReply()`.
 
 ```python
-@nightyScript(
-    name="Status Tools",
-    author="rico",
-    description="Native status slash commands",
-    usage="UI and slash commands"
-)
-def status_tools():
-    # Paste the Slash API framework block here.
-
-    slash = SlashAPI(label="StatusTools")
-
-    @slash.command(description="Show the current status")
-    async def status(ctx):
-        await ctx.send("Status: ready", ephemeral=True)
-
-    slash.autosync()
-
-status_tools()
+@slashCommand(name="hello", description="Say hello")
+async def hello(interaction: discord_bot.Interaction):
+    await slashReply(interaction, f"Hello {bot.user.mention}!")
 ```
 
-## Unique labels
+Nighty supplies `slashCommand`, `slashReply`, `discord_bot`, and `app_commands`.
+Do not import them.
 
-The label separates command ownership and saved fingerprints:
+## Register a command
 
 ```python
-slash = SlashAPI(label="StatusTools")
+@slashCommand(
+    name="roll",
+    description="Roll a die",
+    group=None,
+    group_description=None,
+    nsfw=False
+)
 ```
 
-Do not reuse a label in another script. A collision can overwrite the active instance and its saved command state.
+| Argument | Purpose |
+| --- | --- |
+| `name` | Lowercase name, 1 to 32 characters, with no spaces. |
+| `description` | Command description, up to 100 characters. |
+| `group` | Registers the command as `/group name`. |
+| `group_description` | Sets the group description on its first subcommand. |
+| `nsfw` | Restricts the command to age-restricted channels. |
 
-The framework stores its state in `json/slashapi_state.json`.
+When omitted, `name` defaults to the function name.
 
-## Typed options
+The callback must use `async def` and accept `interaction` as its first
+parameter. Define commands while the script loads. Nighty rejects names already
+used by Nighty or another script.
 
-Function annotations define Discord option types:
+`@slashCommand` returns an `app_commands.Command`. Decorators such as
+`app_commands.describe`, `app_commands.choices`, and `app_commands.rename` work
+with it. Keep `@slashCommand` above the other decorators:
 
 ```python
-from typing import Literal
-
-@slash.command(
-    description="Create a reminder",
-    describe={
-        "minutes": "Delay in minutes",
-        "visibility": "Choose who can see the response"
-    }
-)
-async def remind(
-    ctx,
-    minutes: int,
-    visibility: Literal["private", "public"] = "private"
+@slashCommand(name="repeat", description="Repeat text")
+@app_commands.describe(text="Text to repeat", times="Number of copies")
+async def repeat(
+    interaction: discord_bot.Interaction,
+    text: str,
+    times: app_commands.Range[int, 1, 5] = 1
 ):
-    await ctx.send(
-        f"Reminder set for {minutes} minutes.",
-        ephemeral=visibility == "private"
-    )
+    await slashReply(interaction, "\n".join([text] * times))
 ```
 
-Place required parameters before parameters with defaults. Discord rejects a command when an optional parameter appears before a required parameter.
+Parameters without defaults are required. Parameters with defaults are
+optional. Put required parameters first.
 
-Common annotations include:
+Supported option types include:
 
-- `str`
-- `int`
-- `float`
-- `bool`
+- `str`, `int`, `float`, and `bool`
+- `discord_bot.User`, `Member`, `Role`, `Attachment`, and guild channels
+- `app_commands.Range[...]` and `app_commands.Choice[...]`
 - `Literal[...]`
-- Nighty-injected Discord types such as `discord.User`, `discord.Member`, `discord.Role`, `discord.TextChannel`, and `discord.Attachment`
 
-## Command names and descriptions
+## Send a reply
 
-Discord command names use lowercase letters, numbers, hyphens, and underscores. Descriptions must fit Discord's 100-character limit.
+Use `slashReply()` for normal command responses:
 
 ```python
-@slash.command(
-    name="user-info",
-    description="Show a user's account details",
-    describe={"user": "User to inspect"}
+ok = await slashReply(
+    interaction,
+    "Build finished.",
+    title="Status",
+    image=None,
+    thumbnail=None,
+    show_thumbnail=True
 )
-async def user_info(ctx, user: discord.User):
-    await ctx.send(f"User ID: `{user.id}`", ephemeral=True)
 ```
 
-## Groups and subcommands
+`slashReply()` uses the active theme, including its Components V2 layout. It
+also applies Nighty's Private, Force-private, and Forward settings.
+
+Nighty defers a command after 1.5 seconds. `slashReply()` replaces the thinking
+response, sends later calls as followups, and splits text longer than 4,000
+characters.
+
+Bad arguments raise `TypeError` or `ValueError`. Nighty shows the error to the
+user. Delivery failures return `False` and write an error to the console.
+
+## Subcommands
+
+Set `group` to register `/group command`:
 
 ```python
-tools = slash.group("tools", "Utility commands")
+@slashCommand(
+    name="add",
+    description="Add a note",
+    group="notes",
+    group_description="Quick notes"
+)
+async def notes_add(interaction: discord_bot.Interaction, text: str):
+    await slashReply(interaction, f"Saved: {text}")
 
-@tools.command(name="ping", description="Measure command response")
-async def tools_ping(ctx):
-    await ctx.send("Pong", ephemeral=True)
-
-@tools.command(name="echo", description="Repeat text")
-async def tools_echo(ctx, text: str):
-    await ctx.send(text, ephemeral=True)
+@slashCommand(name="list", description="List notes", group="notes")
+async def notes_list(interaction: discord_bot.Interaction):
+    await slashReply(interaction, "No notes yet.", title="Notes")
 ```
 
-Discord does not run a group by itself. Users choose one of its subcommands.
+Nighty supports one group level. A name cannot be both a group and a top-level
+command.
+
+## Choices
+
+```python
+@slashCommand(name="rps", description="Rock paper scissors")
+@app_commands.choices(pick=[
+    app_commands.Choice(name="Rock", value="rock"),
+    app_commands.Choice(name="Paper", value="paper"),
+    app_commands.Choice(name="Scissors", value="scissors")
+])
+async def rps(
+    interaction: discord_bot.Interaction,
+    pick: app_commands.Choice[str]
+):
+    await slashReply(interaction, f"You picked **{pick.value}**.")
+```
 
 ## Autocomplete
 
 Autocomplete handlers return up to 25 choices:
 
 ```python
-CHANNEL_NAMES = ["general", "support", "updates", "voice"]
+FRUITS = ["Apple", "Banana", "Cherry", "Grape", "Mango"]
 
-@slash.command(description="Select a saved channel name")
-async def channel(ctx, name: str):
-    await ctx.send(f"Selected `{name}`", ephemeral=True)
+@slashCommand(name="fruit", description="Pick a fruit")
+async def fruit(interaction: discord_bot.Interaction, name: str):
+    await slashReply(interaction, f"You picked **{name}**.")
 
-@channel.autocomplete("name")
-async def channel_name_autocomplete(ctx, current: str):
+@fruit.autocomplete("name")
+async def fruit_autocomplete(
+    interaction: discord_bot.Interaction,
+    current: str
+):
     query = current.casefold()
     return [
-        name for name in CHANNEL_NAMES
-        if query in name.casefold()
+        app_commands.Choice(name=fruit, value=fruit)
+        for fruit in FRUITS
+        if query in fruit.casefold()
     ][:25]
 ```
 
-Keep autocomplete handlers fast. Discord waits for the suggestions before it updates the command menu.
+Keep autocomplete handlers fast. Discord waits for them before updating the
+command menu.
 
-## Context menus
+## Components V2
 
-```python
-@slash.menu("Copy Message ID", target="message")
-async def copy_message_id(ctx, message: discord.Message):
-    await ctx.send(f"`{message.id}`", ephemeral=True)
+`slashReply()` uses the current theme. Build a `discord_bot.ui.LayoutView` when
+the command needs custom containers, buttons, selects, or media galleries.
 
-@slash.menu("Show User ID", target="user")
-async def show_user_id(ctx, user: discord.User):
-    await ctx.send(f"`{user.id}`", ephemeral=True)
-```
-
-Context-menu names appear under Discord's Apps menu.
-
-## Guilds, DMs, and group chats
-
-Current Slash API builds apply these decorators when Nighty's application-command library exposes them:
+Nighty may defer the command before the custom layout is ready. Use a helper
+that handles the initial response, the deferred placeholder, and followups:
 
 ```python
-app_commands.allowed_contexts(
-    guilds=True,
-    dms=True,
-    private_channels=True
-)
+async def send_v2(interaction, view, private=None):
+    if private is None:
+        private = bool(getConfigData().get("private"))
 
-app_commands.allowed_installs(
-    guilds=True,
-    users=True
-)
+    if not interaction.response.is_done():
+        return await interaction.response.send_message(
+            view=view,
+            ephemeral=private
+        )
+
+    deferred = (
+        interaction.response.type
+        == discord_bot.InteractionResponseType.deferred_channel_message
+    )
+    if deferred and not interaction.extras.get("v2_placeholder_used"):
+        interaction.extras["v2_placeholder_used"] = True
+        return await interaction.edit_original_response(view=view)
+
+    return await interaction.followup.send(view=view, ephemeral=private)
 ```
 
-User-installed commands can run in servers where the Nighty application bot has no guild cache. Use `ctx.selfbot_guild` when you need the user account's cached guild:
+Custom layouts must set their own privacy. Nighty's Force-private and Forward
+settings do not apply to direct `LayoutView` responses. Button and select
+callbacks must answer within three seconds.
 
-```python
-guild = ctx.guild or ctx.selfbot_guild
-if not guild:
-    await ctx.error("This command needs a server.")
-    return
-```
+Read [Discord Components V2](components-v2.md) for a full layout example.
 
-DM-safe handlers should treat `ctx.guild`, `ctx.guild_id`, and `ctx.selfbot_guild` as optional.
+## Runtime rules
 
-## Response lifecycle
+- Keep imports and helpers inside the `@nightyScript` function.
+- Let uncaught command errors reach Nighty. It logs them and sends an
+  ephemeral error.
+- Use `await asyncio.sleep()` or `await runBlocking(...)` for blocking work.
+- Send modals before Nighty's 1.5-second auto-defer.
+- Press `Ctrl+R` in Discord if a new command does not appear.
 
-### Initial response
+Nighty syncs changes a few seconds after the script loads. Scripts do not need a
+manual tree sync or a copied command framework.
 
-```python
-await ctx.send("Saved.", ephemeral=True)
-```
+## Official reference
 
-### Work that may exceed three seconds
-
-```python
-await ctx.defer(ephemeral=True)
-result = await fetch_report()
-await ctx.send(result, ephemeral=True)
-```
-
-### Error response
-
-```python
-if amount < 1:
-    await ctx.error("Amount must be greater than zero.")
-    return
-```
-
-The context wrapper tracks the initial response, deferred state, and follow-ups. Pass the ephemeral setting on the first response or defer call.
-
-## Components V2 responses
-
-The upstream Slash API ships themed embed helpers. Scripts can also send Components V2 through the raw interaction callback. Read [Discord Components V2](components-v2.md) and the [Components V2 example](../example-scripts/components_v2_example.py).
-
-## Hash synchronization
-
-`slash.autosync()` fingerprints the command definitions. It contacts Discord when the command shape changes.
-
-Changes that affect the fingerprint include:
-
-- command names and descriptions
-- option types, order, defaults, and descriptions
-- groups, autocomplete handlers, and context menus
-
-Keep `slash.autosync()` after all decorators. Moving it above a command leaves that command out of the registration pass.
-
-## Development sync
-
-Global command registration may take time to appear in Discord. Guild-scoped registration appears sooner and suits development. Check the upstream API version before passing a guild option because the supported constructor and decorator arguments may change.
-
-Refresh Discord after a sync. Discord caches the command menu.
-
-## Error handling
-
-```python
-@slash.error
-async def slash_error(ctx, error):
-    print(f"[Status Tools] Slash error: {error}", type_="ERROR")
-    await ctx.error("The command failed. Check the Nighty console.")
-```
-
-Keep user-facing errors short. Put tracebacks and response bodies in the Nighty console.
-
-## Reload behavior
-
-A script reload may leave old commands in the in-memory tree until the framework reconciles its state. Use a stable label and the framework's management command to inspect or prune stale registrations.
-
-Do not bulk-clear `bot_app.tree`. Another Nighty script may own commands in the same tree.
-
-## Troubleshooting
-
-### Command does not appear
-
-- Confirm that `slash.autosync()` runs after the decorators.
-- Check the Nighty console for an HTTP 400 response.
-- Confirm that the label differs from labels in other scripts.
-- Refresh Discord's client after the sync.
-
-### Discord returns HTTP 400
-
-Check the command name, description length, parameter order, annotations, and choice count.
-
-### Reply becomes public
-
-Pass `ephemeral=True` to the first `ctx.send()` or `ctx.defer()` call. Discord fixes response visibility when the interaction starts.
-
-### Commands disappear after another script loads
-
-Check labels for collisions. Search other scripts for code that clears or replaces the full application-command tree.
-
-## Source
-
-- [Slash API repository](https://github.com/lord-m1nx/nighty-slash-api)
-- [Slash API developer manual](https://github.com/lord-m1nx/nighty-slash-api/blob/main/Documentation.md)
+[Custom Slash Commands](https://docs.nighty.one/scripting/custom-slash-commands)

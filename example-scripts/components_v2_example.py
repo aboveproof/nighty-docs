@@ -1,156 +1,85 @@
 @nightyScript(
     name="Components V2 Example",
     author="rico",
-    description="Send a themed Components V2 slash response",
-    usage="/v2status"
+    description="Native Components V2 counter with buttons",
+    usage="/counter"
 )
 def components_v2_example():
     """
     COMPONENTS V2 EXAMPLE
 
-    DEPENDENCIES:
-    - aiohttp, bundled with current Nighty builds
-    - lord-m1nx/nighty-slash-api framework block
-
-    SETUP:
-    Paste the Slash API framework block at the marked line inside this function.
-
     COMMANDS:
-    /v2status - Send a private Components V2 status card
+    /counter - Open a private counter with increment and reset buttons
     """
-    import aiohttp
 
-    # Paste the SLASH API START / END block here.
+    async def send_v2(interaction, view, private=None):
+        if private is None:
+            private = bool(getConfigData().get("private"))
 
-    COMPONENTS_V2_FLAG = 1 << 15
-    EPHEMERAL_FLAG = 1 << 6
+        if not interaction.response.is_done():
+            return await interaction.response.send_message(
+                view=view,
+                ephemeral=private
+            )
 
-    def trim_text(value):
-        value = str(value or "")
-        return value if len(value) <= 3900 else value[:3897] + "..."
-
-    def build_layout(content):
-        content = trim_text(content)
-        try:
-            theme_name = getConfigData().get("theme")
-            theme_data = getThemeData(theme_name=theme_name) or {}
-        except Exception:
-            theme_data = {}
-
-        v2 = theme_data.get("v2") if isinstance(theme_data, dict) else None
-        if not isinstance(v2, dict) or not v2.get("enabled", False):
-            v2 = {
-                "color": theme_data.get("color", "#5865F2"),
-                "layout": [{"text": "{content}"}]
-            }
-
-        try:
-            accent = int(str(v2.get("color", "#5865F2")).lstrip("#"), 16)
-        except (TypeError, ValueError):
-            accent = 0x5865F2
-
-        children = []
-        inserted = False
-
-        for item in v2.get("layout", []):
-            if not isinstance(item, dict):
-                continue
-
-            if "text" in item:
-                text = str(item.get("text") or "")
-                inserted = inserted or "{content}" in text
-                children.append({
-                    "type": 10,
-                    "content": trim_text(text.replace("{content}", content))
-                })
-
-            elif isinstance(item.get("section"), dict):
-                section = item["section"]
-                text = str(section.get("text") or "")
-                image = str(section.get("thumbnail") or "").strip()
-                inserted = inserted or "{content}" in text
-                rendered = trim_text(text.replace("{content}", content))
-                if image.startswith(("https://", "http://")):
-                    children.append({
-                        "type": 9,
-                        "components": [{"type": 10, "content": rendered}],
-                        "accessory": {"type": 11, "media": {"url": image}}
-                    })
-                else:
-                    children.append({"type": 10, "content": rendered})
-
-            elif "image" in item:
-                image = str(item.get("image") or "").strip()
-                if image.startswith(("https://", "http://")):
-                    children.append({
-                        "type": 12,
-                        "items": [{"media": {"url": image}}]
-                    })
-
-            elif "separator" in item:
-                spacing = 2 if str(item.get("separator")).lower() == "large" else 1
-                children.append({"type": 14, "divider": True, "spacing": spacing})
-
-        if not inserted:
-            children.insert(0, {"type": 10, "content": content})
-
-        return [{
-            "type": 17,
-            "accent_color": accent,
-            "components": (children or [{"type": 10, "content": content}])[:39]
-        }]
-
-    async def send_v2(interaction, title, description, ephemeral=True):
-        interaction_id = str(getattr(interaction, "id", "") or "")
-        interaction_token = str(getattr(interaction, "token", "") or "")
-        if not interaction_id or not interaction_token:
-            return False
-
-        content = f"## {title}\n{description}" if title else description
-        flags = COMPONENTS_V2_FLAG | (EPHEMERAL_FLAG if ephemeral else 0)
-        payload = {
-            "type": 4,
-            "data": {
-                "flags": flags,
-                "components": build_layout(content),
-                "allowed_mentions": {"parse": []}
-            }
-        }
-        url = (
-            "https://discord.com/api/v10/interactions/"
-            f"{interaction_id}/{interaction_token}/callback"
+        deferred = (
+            interaction.response.type
+            == discord_bot.InteractionResponseType.deferred_channel_message
         )
+        if deferred and not interaction.extras.get("v2_placeholder_used"):
+            interaction.extras["v2_placeholder_used"] = True
+            return await interaction.edit_original_response(view=view)
 
-        try:
-            timeout = aiohttp.ClientTimeout(total=10)
-            async with aiohttp.ClientSession(timeout=timeout) as session:
-                async with session.post(url, json=payload) as response:
-                    if response.status in (200, 204):
-                        return True
-                    detail = (await response.text())[:300]
-                    print(
-                        f"[Components V2 Example] Discord returned "
-                        f"{response.status}: {detail}",
-                        type_="ERROR"
+        return await interaction.followup.send(view=view, ephemeral=private)
+
+    class CounterView(discord_bot.ui.LayoutView):
+        def __init__(self):
+            super().__init__(timeout=300)
+            self.count = 0
+            self.render()
+
+        def render(self):
+            self.clear_items()
+
+            plus = discord_bot.ui.Button(
+                label="+1",
+                style=discord_bot.ButtonStyle.success
+            )
+            reset = discord_bot.ui.Button(
+                label="Reset",
+                style=discord_bot.ButtonStyle.secondary
+            )
+            plus.callback = self.on_plus
+            reset.callback = self.on_reset
+
+            container = discord_bot.ui.Container(accent_color=0x5865F2)
+            container.add_item(
+                discord_bot.ui.Section(
+                    discord_bot.ui.TextDisplay(
+                        f"## Counter\nCurrent value: **{self.count}**"
+                    ),
+                    accessory=discord_bot.ui.Thumbnail(
+                        str(bot.user.display_avatar.url)
                     )
-        except Exception as error:
-            print(f"[Components V2 Example] Send error: {error}", type_="ERROR")
-        return False
+                )
+            )
+            container.add_item(discord_bot.ui.Separator())
+            container.add_item(discord_bot.ui.ActionRow(plus, reset))
+            self.add_item(container)
 
-    slash = SlashAPI(label="DocsComponentsV2Example")
+        async def on_plus(self, interaction):
+            self.count += 1
+            self.render()
+            await interaction.response.edit_message(view=self)
 
-    @slash.command(description="Show a Components V2 status card")
-    async def v2status(ctx):
-        sent = await send_v2(
-            ctx.interaction,
-            "Nighty status",
-            "**Gateway:** Connected\n**Scripts:** Ready",
-            ephemeral=True
-        )
-        if not sent:
-            await ctx.send("Gateway: connected\nScripts: ready", ephemeral=True)
+        async def on_reset(self, interaction):
+            self.count = 0
+            self.render()
+            await interaction.response.edit_message(view=self)
 
-    slash.autosync()
+    @slashCommand(name="counter", description="Counter with buttons")
+    async def counter(interaction: discord_bot.Interaction):
+        await send_v2(interaction, CounterView())
 
 
 components_v2_example()
