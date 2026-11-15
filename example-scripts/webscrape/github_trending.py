@@ -18,8 +18,8 @@ def github_trending_fetcher():
     <p>trending
 
     NOTES:
-    - Requires `requests` and `beautifulsoup4` packages.
-    - Install with: `pip install requests beautifulsoup4`
+    - Requires Python 3.14-compatible `requests` and `beautifulsoup4` packages.
+    - Both packages must be available to Nighty's Python environment.
     - Uses synchronous HTTP requests with requests library.
     """
 

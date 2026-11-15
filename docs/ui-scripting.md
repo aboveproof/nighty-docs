@@ -59,7 +59,6 @@ def ui_starter():
         gap=4
     )
     card = container.create_card(
-        type="rows",
         width="full",
         height="auto",
         gap=3
@@ -174,7 +173,6 @@ A card holds UI elements and groups.
 
 ```python
 card = container.create_card(
-    type="rows",
     width="full",
     height="auto",
     vertical_align="start",
@@ -183,6 +181,9 @@ card = container.create_card(
     disallow_shrink=False
 )
 ```
+
+Cards do not accept `type`. Use the parent container to arrange cards and a
+group to arrange controls inside a card.
 
 Alignment accepts `start`, `center`, or `end`. Set `disallow_shrink=True` when a card must keep its intended size inside a crowded container.
 

@@ -21,7 +21,7 @@ def deepgram_voice_transcriber():
     <p>deepgramkey dg_yourkey
 
     NOTES:
-    - Requires the `requests` package. Install with: `pip install requests`
+    - Requires a Python 3.14-compatible `requests` package available to Nighty.
     - The API key is stored in the script configuration.
     - Only messages in accessible channels can be fetched.
     """
@@ -35,7 +35,7 @@ def deepgram_voice_transcriber():
     )
 
     async def run_in_thread(func, *args, **kwargs):
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, lambda: func(*args, **kwargs))
 
     def parse_reference(ref: str):

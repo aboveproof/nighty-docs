@@ -4,12 +4,13 @@
 
 <h1>NightyScript Documentation</h1>
 
-<h3>Version 5.0</h3>
+<h3>Version 5.1</h3>
 
 <p>Public reference for Nighty scripts, native UI scripting, slash commands, Discord Components V2, and CUI.</p>
 
 <p>
-  <img alt="Documentation version" src="https://img.shields.io/badge/docs-v5.0-5865F2?style=for-the-badge">
+  <img alt="Documentation version" src="https://img.shields.io/badge/docs-v5.1-5865F2?style=for-the-badge">
+  <img alt="Python version" src="https://img.shields.io/badge/Python-3.14-3776AB?style=for-the-badge">
   <img alt="UI scripting" src="https://img.shields.io/badge/UI_scripting-documented-F59E0B?style=for-the-badge">
   <img alt="Slash commands" src="https://img.shields.io/badge/slash_commands-supported-2EA44F?style=for-the-badge">
   <img alt="Components V2" src="https://img.shields.io/badge/Components-V2-EB459E?style=for-the-badge">
@@ -39,6 +40,7 @@
 
 | Guide | Covers |
 | --- | --- |
+| [Python 3.14 runtime](docs/python-runtime.md) | Version support, compatibility changes, dependencies, and local checks |
 | [Native UI scripting](docs/ui-scripting.md) | Tabs, containers, cards, groups, controls, tables, callbacks, and responsive layouts |
 | [Native slash commands](docs/slash-commands.md) | Typed options, groups, autocomplete, themed replies, and sync |
 | [Discord Components V2](docs/components-v2.md) | Native layouts, containers, buttons, sections, and callbacks |
@@ -51,7 +53,7 @@
 
 ### 1. Understand the runtime
 
-Nighty runs scripts inside its own Python process. Nighty supplies `bot`, `bot_app`, `nightyScript`, `Tab`, `UI`, configuration helpers, theme helpers, and Discord objects.
+Nighty 2.6.2 runs scripts on Python 3.14 inside its own process. Nighty supplies `bot`, `bot_app`, `nightyScript`, `Tab`, `UI`, configuration helpers, theme helpers, and Discord objects.
 
 Do not import Nighty or Discord packages:
 
@@ -63,7 +65,7 @@ from discord import *
 from nighty import *
 ```
 
-Use standard-library imports and dependencies documented by the script. Keep imports inside the decorated function when Nighty callbacks need them. Nighty may execute a script with separate global and local namespaces.
+Use standard-library imports and Python 3.14-compatible dependencies documented by the script. Keep imports inside the decorated function when Nighty callbacks need them. Nighty may execute a script with separate global and local namespaces. Read [Python 3.14 runtime compatibility](docs/python-runtime.md) before adding a package.
 
 ### 2. Start with the script wrapper
 
@@ -266,7 +268,7 @@ Tab
 ```python
 tab = Tab(name="Task Queue", icon="inbox", gap=4)
 container = tab.create_container(type="rows", width="full", height="auto", gap=4)
-card = container.create_card(type="rows", width="full", height="auto", gap=3)
+card = container.create_card(width="full", height="auto", gap=3)
 
 card.create_ui_element(UI.Text, content="Task Queue", size="lg", weight="bold")
 task_input = card.create_ui_element(

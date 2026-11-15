@@ -12,13 +12,24 @@ Check these items:
 - Python indentation remains inside the decorated function.
 - The Nighty console shows no syntax error.
 
-Run a local syntax check:
+Run a local syntax check with Python 3.14:
 
-```bash
-python -m py_compile your_script.py
+```powershell
+py -3.14 -m py_compile your_script.py
 ```
 
-This check catches Python syntax errors. It cannot supply Nighty's injected globals.
+On Linux, use `python3.14 -m py_compile your_script.py`. An older interpreter
+can reject valid 3.14 syntax or miss compatibility problems. This check cannot
+supply Nighty's injected globals. See [Python 3.14 runtime](python-runtime.md).
+
+## Package stopped importing after the Python update
+
+Nighty 2.6.2 uses Python 3.14. Confirm that the package supports Python 3.14
+and, for compiled packages, provides a compatible CPython 3.14 build. A package
+installed into another Python installation may not be visible to Nighty.
+
+Do not install `discord.py`, `discord.py-self`, or a package named `nighty` to
+replace Nighty's injected objects.
 
 ## `There is no current event loop in thread`
 

@@ -37,7 +37,7 @@ def webhook_example():
     
     # Helper function for asynchronous webhook requests
     async def run_in_thread(func, *args, **kwargs):
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, lambda: func(*args, **kwargs))
     
     # Function to send a webhook message
@@ -123,4 +123,4 @@ def webhook_example():
         else:
             await ctx.send("Invalid action. Use 'set', 'send', or 'status'.")
 
-webhook_example()  # Call to initialize 
+webhook_example()  # Call to initialize

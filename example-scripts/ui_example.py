@@ -23,7 +23,6 @@ def native_ui_example():
     )
 
     form_card = page.create_card(
-        type="rows",
         width="full",
         height="auto",
         gap=3
@@ -125,7 +124,6 @@ def native_ui_example():
     clear_button.onClick = clear_profile
 
     table_card = page.create_card(
-        type="rows",
         width="full",
         height="auto",
         gap=3

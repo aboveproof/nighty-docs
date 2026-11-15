@@ -41,7 +41,7 @@ def cui_meter_example():
 
     tab = Tab(name="CUI Meter", icon="chart", gap=4)
     container = tab.create_container(type="rows", width="full", height="auto", gap=4)
-    card = container.create_card(type="rows", width="full", height="auto", gap=3)
+    card = container.create_card(width="full", height="auto", gap=3)
 
     card.create_ui_element(UI.Text, content="Saved level", size="lg", weight="bold")
 

@@ -26,9 +26,17 @@ Fetch the names of GitHub's top trending repositories.
 
 ### Installation
 
+Use Python 3.14-compatible releases of both packages. They must be installed in
+the Python environment used by Nighty. A system `pip` may target a different
+interpreter.
+
 ```bash
-pip install requests beautifulsoup4
+python3.14 -m pip install requests beautifulsoup4
 ```
+
+Use that command only when Nighty uses the same Python installation. On
+Windows, the equivalent command is
+`py -3.14 -m pip install requests beautifulsoup4`.
 
 ### Usage
 

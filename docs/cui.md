@@ -23,7 +23,7 @@ Tab
 ```python
 tab = Tab(name="Account Tools", icon="users", gap=4)
 container = tab.create_container(type="rows", width="full", height="auto", gap=4)
-card = container.create_card(type="rows", width="full", height="auto", gap=3)
+card = container.create_card(width="full", height="auto", gap=3)
 group = card.create_group(type="columns", gap=2, full_width=True)
 group.create_ui_element(UI.Text, content="Ready")
 tab.render()
@@ -65,7 +65,6 @@ container = tab.create_container(
 )
 
 card = container.create_card(
-    type="rows",
     width="full",
     height="auto",
     vertical_align="start",
@@ -75,7 +74,9 @@ card = container.create_card(
 )
 ```
 
-Use `columns` for a horizontal layout and `rows` for a vertical layout. `auto` follows content size. `full` uses available space.
+Use `columns` for a horizontal container or group and `rows` for a vertical one.
+Cards do not accept `type`. `auto` follows content size. `full` uses available
+space.
 
 Mix an `auto` child with a `full` child when one card needs a content width and the other should fill the row. Two `full` cards share the row when CUI can measure both cards before paint.
 
